@@ -1,12 +1,9 @@
--- Enable PostGIS extension
-CREATE EXTENSION IF NOT EXISTS postgis;
-
--- CreateTable for Geofence
+-- CreateTable
 CREATE TABLE "Geofence" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "alertType" TEXT NOT NULL,
-    "categories" TEXT[],  -- Array of categories
+    "categories" TEXT[],
     "fillColor" TEXT NOT NULL,
     "strokeColor" TEXT NOT NULL,
     "fillOpacity" DOUBLE PRECISION NOT NULL,
@@ -17,12 +14,8 @@ CREATE TABLE "Geofence" (
     CONSTRAINT "Geofence_pkey" PRIMARY KEY ("id")
 );
 
--- Create unique index for geofence name
+-- CreateIndex
 CREATE UNIQUE INDEX "Geofence_name_key" ON "Geofence"("name");
 
--- Add geometry column for storing spatial data
-ALTER TABLE "Geofence"
-ADD COLUMN "geometry" geometry(MultiPolygon, 4326);
-
--- Add GIST index on geometry column for fast spatial queries
-CREATE INDEX geofence_geom_idx ON "Geofence" USING GIST (geometry);
+-- CreateIndex
+CREATE INDEX "Geofence_name_idx" ON "Geofence"("name");

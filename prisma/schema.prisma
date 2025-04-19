@@ -17,7 +17,6 @@ model Geofence {
   strokeWidth    Float
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  geometry       Json?    // Will store GeoJSON data, as Prisma doesn't handle geometry types natively
 
   @@index([name]) // Additional index on the name column
 }
