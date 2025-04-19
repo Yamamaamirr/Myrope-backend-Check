@@ -1,0 +1,23 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+model Geofence {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  alertType      String
+  categories     String[] // Stored as text[] in Postgres
+  fillColor      String
+  strokeColor    String
+  fillOpacity    Float
+  strokeWidth    Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  geometry       Json?    // Will store GeoJSON data, as Prisma doesn't handle geometry types natively
+
+  @@index([name]) // Additional index on the name column
+}
