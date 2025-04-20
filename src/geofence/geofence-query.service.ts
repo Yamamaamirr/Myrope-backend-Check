@@ -42,12 +42,10 @@ export class GeofenceQueryService {
       updatedAt: record.updatedAt,
     };
 
-    // Add polygon geometry if exists
     if (record.geometry) {
       response.geometry = record.geometry;
     }
 
-    // Add circles if they exist
     if (record.circle_centers && record.circle_radii) {
       const centers = record.circle_centers.coordinates || [];
       const radii = record.circle_radii || [];

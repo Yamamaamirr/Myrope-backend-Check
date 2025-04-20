@@ -178,4 +178,130 @@ export class GeofenceRepository {
     });
     return count === 0;
   }
+  async updateGeofence(
+    id: string,
+    data: {
+      name?: string;
+      alertType?: string;
+      categories?: string[];
+      fillColor?: string;
+      strokeColor?: string;
+      fillOpacity?: number;
+      strokeWidth?: number;
+      geometry?: MultiPolygon | null;
+      circleCenters?: MultiPoint | null;
+      circleRadii?: number[] | null;
+    }
+  ) {
+    // Start building the query
+    let query = `UPDATE "Geofence" SET "updatedAt" = NOW()`;
+    const params: any[] = [];
+    let paramIndex = 1;
+  
+    // Add fields that are being updated
+    if (data.name !== undefined) {
+      query += `, "name" = $${paramIndex}`;
+      params.push(data.name);
+      paramIndex++;
+    }
+  
+    if (data.alertType !== undefined) {
+      query += `, "alertType" = $${paramIndex}`;
+      params.push(data.alertType);
+      paramIndex++;
+    }
+  
+    if (data.categories !== undefined) {
+      query += `, "categories" = $${paramIndex}`;
+      params.push(data.categories);
+      paramIndex++;
+    }
+  
+    if (data.fillColor !== undefined) {
+      query += `, "fillColor" = $${paramIndex}`;
+      params.push(data.fillColor);
+      paramIndex++;
+    }
+  
+    if (data.strokeColor !== undefined) {
+      query += `, "strokeColor" = $${paramIndex}`;
+      params.push(data.strokeColor);
+      paramIndex++;
+    }
+  
+    if (data.fillOpacity !== undefined) {
+      query += `, "fillOpacity" = $${paramIndex}`;
+      params.push(data.fillOpacity);
+      paramIndex++;
+    }
+  
+    if (data.strokeWidth !== undefined) {
+      query += `, "strokeWidth" = $${paramIndex}`;
+      params.push(data.strokeWidth);
+      paramIndex++;
+    }
+  
+    // Handle geometry updates, including null case
+    if (data.geometry !== undefined) {
+      if (data.geometry === null) {
+        query += `, "geometry" = NULL`;
+      } else {
+        const geometryJson = JSON.stringify(data.geometry);
+        query += `, "geometry" = ST_SetSRID(ST_GeomFromGeoJSON($${paramIndex}), 4326)`;
+        params.push(geometryJson);
+        paramIndex++;
+      }
+    }
+  
+    // Handle circle updates, including null case
+    if (data.circleCenters !== undefined) {
+      if (data.circleCenters === null) {
+        query += `, "circle_centers" = NULL`;
+      } else {
+        const circleCentersJson = JSON.stringify(data.circleCenters);
+        query += `, "circle_centers" = ST_SetSRID(ST_GeomFromGeoJSON($${paramIndex}), 4326)`;
+        params.push(circleCentersJson);
+        paramIndex++;
+      }
+    }
+  
+    if (data.circleRadii !== undefined) {
+      if (data.circleRadii === null) {
+        query += `, "circle_radii" = NULL`;
+      } else {
+        // Create placeholders for each radius
+        const radiiPlaceholders = data.circleRadii.map((_, i) => `$${paramIndex + i}`).join(',');
+        query += `, "circle_radii" = ARRAY[${radiiPlaceholders}]::float[]`;
+        
+        // Add each radius as a separate parameter
+        data.circleRadii.forEach(radius => {
+          params.push(radius);
+        });
+        
+        paramIndex += data.circleRadii.length;
+      }
+    }
+  
+    // Add WHERE clause - but don't return the geometry directly
+    query += ` WHERE "id" = $${paramIndex}`;
+    params.push(id);
+  
+    // Execute the update query without returning geometry
+    await this.prisma.$executeRawUnsafe(query, ...params);
+    
+    // Then fetch the updated record using our existing findById method
+    // which already handles geometry serialization correctly
+    return this.findById(id);
+  }
+  async isNameUniqueExcept(name: string, id: string): Promise<boolean> {
+    const count = await this.prisma.geofence.count({
+      where: {
+        name,
+        id: {
+          not: id
+        }
+      },
+    });
+    return count === 0;
+  }
 }

@@ -1,11 +1,14 @@
-import { Body, Controller, Post, Get, Param, UsePipes, HttpCode, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, UsePipes, HttpCode, HttpStatus, Patch, NotFoundException } from '@nestjs/common';
 import { CreateGeofenceDto } from './dto/geofence.dto';
 import { GeofenceService } from './geofence.service';
 import { GeofenceQueryService } from './geofence-query.service';
-import { GeofenceValidationPipe } from './validators/geofence.pipe';
+import { GeofenceValidationPipe } from './pipes/geofence.pipe';
 import { ApiResponse, ApiTags, ApiOperation, ApiBody, ApiParam } from '@nestjs/swagger';
 import { GeofenceResponseDto, GeofenceListResponseDto } from './dto/get-geofence.dto';
-import { ValidationPipe } from '@nestjs/common'; // Add this import
+import { ValidationPipe } from '@nestjs/common';
+import { UpdateGeofenceDto } from './dto/update-geofence.dto';
+
+
 
 @ApiTags('geofence')
 @Controller('geofence')
@@ -53,5 +56,19 @@ export class GeofenceController {
     @Param('id') id: string,
   ): Promise<GeofenceResponseDto> {
     return this.queryService.findById(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a geofence' })
+  @ApiParam({ name: 'id', description: 'Geofence ID' })
+  @ApiResponse({ status: 200, description: 'Geofence updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Geofence not found' })
+  @ApiResponse({ status: 409, description: 'Name already exists' })
+  async update(
+    @Param('id') id: string,
+    @Body(new GeofenceValidationPipe()) updateGeofenceDto: UpdateGeofenceDto,
+  ) {
+    return this.geofenceService.updateGeofence(id, updateGeofenceDto);
   }
 }
