@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MultiPolygon, MultiPoint } from 'geojson';
 
@@ -303,5 +303,19 @@ export class GeofenceRepository {
       },
     });
     return count === 0;
+  }
+
+  async deleteGeofence(id: string): Promise<void> {
+    try {
+      await this.prisma.geofence.delete({
+        where: { id }
+      });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        // Prisma error code for record not found
+        throw new NotFoundException(`Geofence with ID ${id} not found`);
+      }
+      throw error;
+    }
   }
 }

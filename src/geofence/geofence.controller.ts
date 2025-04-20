@@ -1,4 +1,5 @@
-import { Body, Controller, Post, Get, Param, UsePipes, HttpCode, HttpStatus, Patch, NotFoundException } from '@nestjs/common';
+// Update imports to include Delete
+import { Body, Controller, Post, Get, Param, UsePipes, HttpCode, HttpStatus, Patch, Delete, NotFoundException } from '@nestjs/common';
 import { CreateGeofenceDto } from './dto/geofence.dto';
 import { GeofenceService } from './geofence.service';
 import { GeofenceQueryService } from './geofence-query.service';
@@ -70,5 +71,16 @@ export class GeofenceController {
     @Body(new GeofenceValidationPipe()) updateGeofenceDto: UpdateGeofenceDto,
   ) {
     return this.geofenceService.updateGeofence(id, updateGeofenceDto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a geofence' })
+  @ApiParam({ name: 'id', description: 'Geofence ID' })
+  @ApiResponse({ status: 200, description: 'Geofence deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Geofence not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async deleteGeofence(@Param('id') id: string) {
+    return this.geofenceService.deleteGeofence(id);
   }
 }

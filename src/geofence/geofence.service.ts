@@ -193,4 +193,26 @@ export class GeofenceService {
       throw new InternalServerErrorException('Failed to update geofence');
     }
   }
+
+  async deleteGeofence(id: string) {
+    // 1. Check if geofence exists
+    const existingGeofence = await this.repository.findById(id);
+    if (!existingGeofence) {
+      throw new NotFoundException(`Geofence with ID ${id} not found`);
+    }
+  
+    // 2. Delete the geofence
+    try {
+      await this.repository.deleteGeofence(id);
+      
+      // Return success response
+      return { 
+        success: true, 
+        message: 'Geofence deleted successfully' 
+      };
+    } catch (error) {
+      this.logger.error(`Failed to delete geofence: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Failed to delete geofence');
+    }
+  }
 }
