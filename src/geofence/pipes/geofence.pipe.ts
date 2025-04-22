@@ -23,9 +23,8 @@ export class GeofenceValidationPipe implements PipeTransform {
       );
     }
 
-    // Validate style values if provided
     if (value.style) {
-      // Check for negative or invalid opacity
+
       if (value.style.fillOpacity !== undefined) {
         if (value.style.fillOpacity < 0 || value.style.fillOpacity > 1) {
           throw new BadRequestException(

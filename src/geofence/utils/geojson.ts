@@ -1,6 +1,6 @@
 import { FeatureCollection, Polygon, MultiPolygon, Point, MultiPoint } from 'geojson';
 
-export function validateGeoJson(geojson: any): asserts geojson is FeatureCollection<Polygon> {
+export function validateGeoJson(geojson: any): asserts geojson is FeatureCollection<Polygon | MultiPolygon> {
     // Check if it's a valid GeoJSON FeatureCollection
     if (!geojson || typeof geojson !== 'object') {
         throw new Error('GeoJSON must be an object');
@@ -28,73 +28,110 @@ export function validateGeoJson(geojson: any): asserts geojson is FeatureCollect
             throw new Error(`Feature at index ${featureIndex} must have a geometry object`);
         }
         
-        if (feature.geometry.type !== 'Polygon') {
-            throw new Error(`Feature at index ${featureIndex} must have a Polygon geometry`);
+        if (feature.geometry.type !== 'Polygon' && feature.geometry.type !== 'MultiPolygon') {
+            throw new Error(`Feature at index ${featureIndex} must have a Polygon or MultiPolygon geometry`);
         }
         
         if (!Array.isArray(feature.geometry.coordinates)) {
             throw new Error(`Feature at index ${featureIndex} must have coordinates array`);
         }
         
-        // Validate polygon rings
-        feature.geometry.coordinates.forEach((ring, ringIndex) => {
-            if (!Array.isArray(ring)) {
-                throw new Error(`Ring ${ringIndex} of feature ${featureIndex} must be an array`);
-            }
-            
-            // Check if polygon has enough points (at least 4 for a closed shape)
-            if (ring.length < 4) {
-                throw new Error(`Ring ${ringIndex} of feature ${featureIndex} must have at least 4 points to form a valid polygon`);
-            }
-            
-            // Check if polygon is closed (first and last points are identical)
-            const firstPoint = ring[0];
-            const lastPoint = ring[ring.length - 1];
-            
-            if (!Array.isArray(firstPoint) || firstPoint.length !== 2 || 
-                !Array.isArray(lastPoint) || lastPoint.length !== 2) {
-                throw new Error(`Points in ring ${ringIndex} of feature ${featureIndex} must be [longitude, latitude] arrays`);
-            }
-            
-            if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
-                throw new Error(`Ring ${ringIndex} of feature ${featureIndex} must be closed (first and last points must be identical)`);
-            }
-            
-            // Validate each point in the ring
-            ring.forEach((point, pointIndex) => {
-                if (!Array.isArray(point) || point.length !== 2) {
-                    throw new Error(`Point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be a [longitude, latitude] array`);
-                }
-                
-                const [longitude, latitude] = point;
-                
-                if (typeof longitude !== 'number' || isNaN(longitude)) {
-                    throw new Error(`Longitude of point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be a number`);
-                }
-                
-                if (typeof latitude !== 'number' || isNaN(latitude)) {
-                    throw new Error(`Latitude of point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be a number`);
-                }
-                
-                // Check coordinate ranges
-                if (longitude < -180 || longitude > 180) {
-                    throw new Error(`Longitude of point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be between -180 and 180`);
-                }
-                
-                if (latitude < -90 || latitude > 90) {
-                    throw new Error(`Latitude of point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be between -90 and 90`);
-                }
-            });
-        });
+        if (feature.geometry.type === 'Polygon') {
+            validatePolygonCoordinates(feature.geometry.coordinates, featureIndex);
+        } else if (feature.geometry.type === 'MultiPolygon') {
+            validateMultiPolygonCoordinates(feature.geometry.coordinates, featureIndex);
+        }
     });
 }
 
-export function convertToMultiPolygon(featureCollection: FeatureCollection<Polygon>): MultiPolygon {
-    const coordinates = featureCollection.features.map(feature => {
-        if (!feature.geometry || feature.geometry.type !== 'Polygon') {
-            throw new Error('All features must be Polygon features');
+function validatePolygonCoordinates(coordinates: any[], featureIndex: number) {
+    // Validate polygon rings
+    coordinates.forEach((ring, ringIndex) => {
+        if (!Array.isArray(ring)) {
+            throw new Error(`Ring ${ringIndex} of feature ${featureIndex} must be an array`);
         }
-        return feature.geometry.coordinates;
+        
+        // Check if polygon has enough points (at least 4 for a closed shape)
+        if (ring.length < 4) {
+            throw new Error(`Ring ${ringIndex} of feature ${featureIndex} must have at least 4 points to form a valid polygon`);
+        }
+        
+        // Check if polygon is closed (first and last points are identical)
+        const firstPoint = ring[0];
+        const lastPoint = ring[ring.length - 1];
+        
+        if (!Array.isArray(firstPoint) || firstPoint.length !== 2 || 
+            !Array.isArray(lastPoint) || lastPoint.length !== 2) {
+            throw new Error(`Points in ring ${ringIndex} of feature ${featureIndex} must be [longitude, latitude] arrays`);
+        }
+        
+        if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+            throw new Error(`Ring ${ringIndex} of feature ${featureIndex} must be closed (first and last points must be identical)`);
+        }
+        
+        // Validate each point in the ring
+        validatePoints(ring, ringIndex, featureIndex);
+    });
+}
+
+function validateMultiPolygonCoordinates(coordinates: any[], featureIndex: number) {
+    if (!Array.isArray(coordinates)) {
+        throw new Error(`MultiPolygon coordinates of feature ${featureIndex} must be an array`);
+    }
+    
+    coordinates.forEach((polygon, polygonIndex) => {
+        if (!Array.isArray(polygon)) {
+            throw new Error(`Polygon ${polygonIndex} of MultiPolygon feature ${featureIndex} must be an array`);
+        }
+        
+        validatePolygonCoordinates(polygon, featureIndex);
+    });
+}
+
+function validatePoints(points: any[], ringIndex: number, featureIndex: number) {
+    points.forEach((point, pointIndex) => {
+        if (!Array.isArray(point) || point.length !== 2) {
+            throw new Error(`Point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be a [longitude, latitude] array`);
+        }
+        
+        const [longitude, latitude] = point;
+        
+        if (typeof longitude !== 'number' || isNaN(longitude)) {
+            throw new Error(`Longitude of point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be a number`);
+        }
+        
+        if (typeof latitude !== 'number' || isNaN(latitude)) {
+            throw new Error(`Latitude of point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be a number`);
+        }
+        
+        // Check coordinate ranges
+        if (longitude < -180 || longitude > 180) {
+            throw new Error(`Longitude of point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be between -180 and 180`);
+        }
+        
+        if (latitude < -90 || latitude > 90) {
+            throw new Error(`Latitude of point ${pointIndex} in ring ${ringIndex} of feature ${featureIndex} must be between -90 and 90`);
+        }
+    });
+}
+
+export function convertToMultiPolygon(featureCollection: FeatureCollection<Polygon | MultiPolygon>): MultiPolygon {
+    const coordinates: number[][][][] = [];
+    
+    featureCollection.features.forEach(feature => {
+        if (!feature.geometry) {
+            throw new Error('All features must have geometry');
+        }
+        
+        if (feature.geometry.type === 'Polygon') {
+            // Add the polygon as a single element in the MultiPolygon
+            coordinates.push(feature.geometry.coordinates as number[][][]);
+        } else if (feature.geometry.type === 'MultiPolygon') {
+            // Add all polygons from the MultiPolygon
+            (feature.geometry.coordinates as number[][][][]).forEach(polygon => {
+                coordinates.push(polygon);
+            });
+        }
     });
 
     return {

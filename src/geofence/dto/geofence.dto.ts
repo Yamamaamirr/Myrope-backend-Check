@@ -38,12 +38,12 @@ class CircleDto {
 class GeometryDto {
   @ApiProperty()
   @IsString()
-  @IsIn(['Polygon'])
-  type: 'Polygon';
+  @IsIn(['Polygon', 'MultiPolygon'])
+  type: 'Polygon' | 'MultiPolygon';
 
   @ApiProperty()
   @IsArray()
-  coordinates: number[][][];
+  coordinates: number[][][] | number[][][][];
 }
 
 class FeatureDto {
